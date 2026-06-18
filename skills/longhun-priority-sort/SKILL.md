@@ -1,3 +1,8 @@
+---
+name: longhun-priority-sort
+description: 龍魂三色审计优先级排序器
+---
+
 # 龍魂三色审计优先级排序
 
 > DNA: #龍芯⚡️-PRIORITY-SORT-v1.0

@@ -1,0 +1,118 @@
+name: Auto Audit
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check skill file structure
+        run: |
+          for skill in skills/longhun-memory-bootstrap skills/longhun-priority-sort skills/dragon-soul-agent; do
+            if [ ! -f "${skill}/SKILL.md" ]; then
+              echo "Missing ${skill}/SKILL.md"
+              exit 1
+            fi
+          done
+          echo "Skill structure OK"
+
+      - name: Check for personal identifiers
+        run: |
+          # The CI definition itself contains the search patterns, so exclude .github from the scan.
+          if grep -R -E "UID9622|诸葛鑫|龍芯北辰|/Users/zuimeidedeyihan" \
+              --exclude-dir=.git --exclude-dir=.github . >/dev/null 2>&1; then
+            echo "Personal identifier leak detected"
+            exit 1
+          fi
+          echo "No personal identifiers found"
+
+      - name: Check DNA trace tags
+        run: |
+          rc=0
+          while IFS= read -r f; do
+            if ! grep -Ei "(DNA|#龍芯⚡️)" "$f" >/dev/null; then
+              echo "Missing DNA trace tag in $f"
+              rc=1
+            fi
+          done < <(find skills -type f \( -name 'SKILL.md' -o -name '*.py' \))
+          if [ "$rc" -eq 0 ]; then
+            echo "DNA trace tags OK"
+          fi
+          exit "$rc"
+
+      - name: Check LICENSE mentions 君子协议 / CC BY-NC-SA 4.0
+        run: |
+          if ! grep -Ei "君子协议|CC BY-NC-SA 4\\.0|Attribution-NonCommercial-ShareAlike" LICENSE >/dev/null; then
+            echo "LICENSE missing required terms"
+            exit 1
+          fi
+          echo "LICENSE OK"
+
+      - name: Test priority_sort.py with sample data
+        run: |
+          python3 <<'PY'
+          import json, subprocess, sys
+          tasks = [
+              {"name": "fix-build", "blocker": 90, "risk": 70, "impact": 60, "urgency": 50},
+              {"name": "merge-main", "blocker": 80, "risk": 40, "impact": 90, "urgency": 60},
+              {"name": "install-deps", "blocker": 30, "risk": 20, "impact": 40, "urgency": 30},
+          ]
+          proc = subprocess.run(
+              ["python3", "skills/longhun-priority-sort/priority_sort.py",
+               "--tasks", json.dumps(tasks), "--json"],
+              capture_output=True, text=True, check=True,
+          )
+          result = json.loads(proc.stdout)
+          assert len(result) == 3, f"expected 3 tasks, got {len(result)}"
+          assert result[0]["name"] == "fix-build" and result[0]["color"] == "🔴", result[0]
+          assert result[1]["name"] == "merge-main" and result[1]["color"] == "🟡", result[1]
+          assert result[2]["name"] == "install-deps" and result[2]["color"] == "🟢", result[2]
+          print("priority_sort.py OK")
+          PY
+
+      - name: Install PyYAML for frontmatter validation
+        run: pip install pyyaml
+
+      - name: Validate SKILL.md YAML frontmatter
+        run: |
+          python3 <<'PY'
+          import re, sys, pathlib
+          import yaml
+
+          rc = 0
+          for path in pathlib.Path("skills").rglob("SKILL.md"):
+              text = path.read_text(encoding="utf-8")
+              if not text.startswith("---"):
+                  print(f"{path}: missing frontmatter start")
+                  rc = 1
+                  continue
+              parts = text.split("---", 2)
+              if len(parts) < 3:
+                  print(f"{path}: malformed frontmatter")
+                  rc = 1
+                  continue
+              try:
+                  yaml.safe_load(parts[1])
+                  print(f"{path}: frontmatter OK")
+              except Exception as exc:
+                  print(f"{path}: YAML parse error: {exc}")
+                  rc = 1
+          sys.exit(rc)
+          PY
+
+      - name: Check for unwanted files
+        run: |
+          unwanted=$(find . \( -name '__pycache__' -o -name '.DS_Store' \) | grep -v '^./.git' || true)
+          if [ -n "$unwanted" ]; then
+            echo "Unwanted files found:"
+            echo "$unwanted"
+            exit 1
+          fi
+          echo "No unwanted files"
