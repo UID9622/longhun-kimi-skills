@@ -1,5 +1,11 @@
 # 龍魂 Kimi 技能集 / LongHun Kimi Skills
 
+[![License](https://img.shields.io/badge/license-MulanPSL%20v2%20%7C%20CC%20BY--NC--SA%204.0-green)](LICENSE)
+[![Stars](https://img.shields.io/github/stars/UID9622/longhun-kimi-skills?style=social)](https://github.com/UID9622/longhun-kimi-skills/stargazers)
+[![Issues](https://img.shields.io/github/issues/UID9622/longhun-kimi-skills)](https://github.com/UID9622/longhun-kimi-skills/issues)
+[![Last Commit](https://img.shields.io/github/last-commit/UID9622/longhun-kimi-skills)](https://github.com/UID9622/longhun-kimi-skills/commits)
+
+
 面向 [Kimi Code CLI](https://www.moonshot.cn/) 的技能集合，提供中文原生数字生态、三色审计、DNA追溯、通心译等能力。
 
 ## 包含技能
